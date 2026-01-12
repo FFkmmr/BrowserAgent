@@ -22,6 +22,12 @@ def setup_logger():
     )
     
     # File output
+    # Убедимся, что директория для файла логов существует
+    try:
+        config.LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
     logger.add(
         config.LOG_FILE,
         level="DEBUG",

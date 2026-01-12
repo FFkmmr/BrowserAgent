@@ -76,10 +76,14 @@ python -m playwright install chromium
 cp .env.example .env
 ```
 
-Добавьте ваш API ключ Anthropic:
+Настройте LLM провайдера через `API_KEY`, `API_BASE_URL`, `MODEL_NAME`.
+
+Пример для Groq (OpenAI-compatible):
 
 ```env
-ANTHROPIC_API_KEY=your_api_key_here
+API_KEY=gsk_...
+API_BASE_URL=https://api.groq.com/openai/v1
+MODEL_NAME=llama-3.3-70b-versatile
 ```
 
 ### 3. Запуск

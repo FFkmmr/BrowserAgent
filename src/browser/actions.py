@@ -6,6 +6,7 @@ from playwright.async_api import Page, TimeoutError as PlaywrightTimeout
 from src.utils.logger import log
 from src.utils.types import ActionResult, ActionType
 import asyncio
+import inspect
 
 
 class BrowserActions:
@@ -42,15 +43,40 @@ class BrowserActions:
                     error=f"Неизвестное действие: {action_type}"
                 )
             
-            # Выполняем действие
-            result_data = await action_func(**parameters)
-            
+            # Выполняем действие (фильтруем лишние параметры, чтобы агент не падал)
+            safe_parameters = parameters or {}
+            try:
+                sig = inspect.signature(action_func)
+                allowed = set(sig.parameters.keys())
+                filtered = {k: v for k, v in safe_parameters.items() if k in allowed}
+                dropped = set(safe_parameters.keys()) - set(filtered.keys())
+                if dropped:
+                    log.debug(f"Игнорирую лишние параметры для {action_type.value}: {sorted(dropped)}")
+                safe_parameters = filtered
+            except Exception:
+                pass
+
+            result_data = await action_func(**safe_parameters)
+
             duration = asyncio.get_event_loop().time() - start_time
-            
+
+            # Normalize "soft" failures into ActionResult.success=False
+            # (e.g., click() may return {clicked: False, error: "..."} instead of raising)
+            success = True
+            error = None
+            if isinstance(result_data, dict):
+                failure_flags = ("clicked", "typed", "selected")
+                for flag in failure_flags:
+                    if flag in result_data and result_data.get(flag) is False:
+                        success = False
+                        error = str(result_data.get("error") or f"{flag} failed")
+                        break
+
             return ActionResult(
-                success=True,
+                success=success,
                 data=result_data,
-                duration=duration
+                error=error,
+                duration=duration,
             )
             
         except Exception as e:
@@ -147,11 +173,22 @@ class BrowserActions:
     
     # ==================== EXTRACTION ====================
     
-    async def extract_text(self, selector: str = "body") -> str:
+    async def extract_text(self, selector: str = "body", limit: int = None) -> str:
         """Извлечь текст"""
         log.info(f"Извлечение текста из {selector}")
         
         try:
+            if limit and limit > 0:
+                # Берём первые N совпадений селектора
+                await self.page.wait_for_selector(selector, timeout=10000)
+                elements = await self.page.query_selector_all(selector)
+                parts = []
+                for el in elements[:limit]:
+                    t = await el.text_content()
+                    if t:
+                        parts.append(t.strip())
+                return "\n".join([p for p in parts if p])
+
             element = await self.page.wait_for_selector(selector, timeout=10000)
             text = await element.text_content()
             return text.strip() if text else ""

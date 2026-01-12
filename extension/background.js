@@ -14,15 +14,23 @@ let agentState = {
 
 // WebSocket соединение с Python backend (опционально)
 let ws = null;
+let wsConnecting = false;
+
+const WS_URL = 'ws://localhost:8765/ws';
 
 // Подключение к Python backend
 function connectToBackend() {
+  if (wsConnecting) return;
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+
+  wsConnecting = true;
   try {
-    ws = new WebSocket('ws://localhost:8765');
+    ws = new WebSocket(WS_URL);
     
     ws.onopen = () => {
       console.log('Connected to Python backend');
       agentState.websocketConnected = true;
+      wsConnecting = false;
       broadcastState();
     };
     
@@ -32,24 +40,31 @@ function connectToBackend() {
     };
     
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      // Don't spam extension error panel when backend isn't running.
+      console.warn('WebSocket error:', error);
       agentState.websocketConnected = false;
+      wsConnecting = false;
     };
     
     ws.onclose = () => {
       console.log('Disconnected from Python backend');
       agentState.websocketConnected = false;
+      wsConnecting = false;
       // Переподключение через 5 секунд
       setTimeout(connectToBackend, 5000);
     };
     
   } catch (error) {
-    console.error('Failed to connect to backend:', error);
+    console.warn('Failed to connect to backend:', error);
+    wsConnecting = false;
   }
 }
 
 // Обработка сообщений от Python backend
 function handleBackendMessage(message) {
+  // Relay everything to sidepanel/popup UIs.
+  chrome.runtime.sendMessage({ type: 'backend_event', payload: message });
+
   switch (message.type) {
     case 'task_started':
       agentState.isRunning = true;
@@ -58,6 +73,12 @@ function handleBackendMessage(message) {
       break;
       
     case 'task_completed':
+      agentState.isRunning = false;
+      agentState.currentTask = null;
+      broadcastState();
+      break;
+
+    case 'task_failed':
       agentState.isRunning = false;
       agentState.currentTask = null;
       broadcastState();
@@ -75,6 +96,8 @@ function sendToBackend(message) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(message));
   } else {
+    // Attempt to connect and let UI show status.
+    connectToBackend();
     console.warn('WebSocket not connected');
   }
 }
@@ -93,16 +116,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   switch (message.type) {
     case 'start_task':
+      connectToBackend();
       startTask(message.task);
       sendResponse({ success: true });
       break;
       
     case 'get_state':
+      connectToBackend();
       sendResponse({ state: agentState });
       break;
       
     case 'stop_task':
+      connectToBackend();
       stopTask();
+      sendResponse({ success: true });
+      break;
+
+    case 'chat_message':
+      connectToBackend();
+      sendToBackend({ type: 'start_task', task: message.text });
       sendResponse({ success: true });
       break;
       
@@ -146,9 +178,10 @@ function stopTask() {
 // Инициализация при загрузке
 chrome.runtime.onInstalled.addListener(() => {
   console.log('AI Browser Agent installed');
-  // Попытка подключения к backend
-  connectToBackend();
+  // Side panel behavior
+  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  }
 });
 
-// Попытка подключения при старте
-connectToBackend();
+// Lazy connect: only connect when UI asks / task starts.

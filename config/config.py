@@ -35,8 +35,19 @@ class Config:
     
     # Browser Settings
     BROWSER_TYPE: str = os.getenv("BROWSER_TYPE", "chromium")
+    # Playwright 'channel' (e.g. 'chrome', 'msedge') to use system browser builds instead of bundled chromium
+    BROWSER_CHANNEL: str = os.getenv("BROWSER_CHANNEL", "")
     HEADLESS: bool = os.getenv("HEADLESS", "false").lower() == "true"
     SLOW_MO: int = int(os.getenv("SLOW_MO", "100"))
+    KEEP_BROWSER_OPEN: bool = os.getenv("KEEP_BROWSER_OPEN", "false").lower() == "true"
+
+    # Attach to an existing Chrome/Chromium via DevTools (CDP)
+    # Example: http://127.0.0.1:9222
+    CHROME_CDP_URL: str = os.getenv("CHROME_CDP_URL", "")
+
+    # CDP connection timeout (seconds). Used to fail fast when Chrome isn't
+    # started with --remote-debugging-port.
+    CDP_CONNECT_TIMEOUT_SECONDS: int = int(os.getenv("CDP_CONNECT_TIMEOUT_SECONDS", "5"))
     
     # LLM Settings (можно переопределить в .env)
     MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "4096"))

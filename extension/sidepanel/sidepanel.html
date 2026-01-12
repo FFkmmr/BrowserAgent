@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Browser Agent</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="title">AI Browser Agent</div>
+      <div class="status">
+        <span id="backendStatus" class="pill">Backend: …</span>
+        <span id="agentStatus" class="pill">Agent: …</span>
+      </div>
+    </header>
+
+    <main class="main">
+      <div id="chat" class="chat"></div>
+    </main>
+
+    <footer class="footer">
+      <textarea id="input" class="input" placeholder="Напиши задачу… (например: открой Gmail и найди последнее приглашение на собеседование)" rows="3"></textarea>
+      <div class="actions">
+        <button id="send" class="btn primary">Отправить</button>
+        <button id="stop" class="btn">Стоп</button>
+      </div>
+      <div class="hint">
+        Backend должен быть запущен локально: <code>python run_backend.py</code>
+      </div>
+    </footer>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

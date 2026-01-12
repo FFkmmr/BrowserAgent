@@ -8,7 +8,8 @@
     "activeTab",
     "tabs",
     "scripting",
-    "storage"
+    "storage",
+    "sidePanel"
   ],
   
   "host_permissions": [
@@ -18,6 +19,10 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
   },
   
   "content_scripts": [
@@ -29,17 +34,17 @@
   ],
   
   "action": {
-    "default_popup": "popup/popup.html",
+    "default_title": "AI Browser Agent",
     "default_icon": {
-      "16": "icons/icon16.png",
+      "16": "icons/icon48.png",
       "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "128": "icons/icon48.png"
     }
   },
   
   "icons": {
-    "16": "icons/icon16.png",
+    "16": "icons/icon48.png",
     "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "128": "icons/icon48.png"
   }
 }
